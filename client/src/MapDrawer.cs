@@ -22,24 +22,30 @@ namespace Opiso.Client {
         private void DrawObjectLayer(Surface surface, int layerIndex, ScreenSection section) {
             // Draw the layer line by line, each time asking our delegate to draw its
             // objects beforehand.
-            int actionLayerIndex = Map.GetActionLayerIndex(i);            
-            section.TileHeight = 1;
-            for (int i = top; i < height; i++) {                
-                section.TileTop = i;
-                DrawObjects(surface, actionLayerIndex, section);
-                DrawNormalLayer(surface, layerIndex, section);
+            int actionLayerIndex = Map.GetActionLayerIndex(layerIndex);
+            var newSection = new ScreenSection();
+            newSection.TileLeft = section.TileLeft;
+            newSection.TileWidth = section.TileWidth;
+            newSection.TileSize = section.TileSize;
+            newSection.XOffset = section.XOffset;
+            newSection.YOffset = section.YOffset;
+            newSection.TileHeight = 1;
+            for (int i = section.TileTop; i < section.TileTop + section.TileHeight; i++) {
+                newSection.TileTop = i;
+                DrawObjects(surface, actionLayerIndex, newSection);
+                DrawNormalLayer(surface, layerIndex, newSection);
             }
         }
 
         private void DrawNormalLayer(Surface surface, int layerIndex, ScreenSection section) {
             // Draw each line from left to right.
             var layer = Map.Layers[layerIndex];
-            for (var y = top; y < height; y++) {
-                for (var x = left; x < width; x++) {
+            for (var y = section.TileTop; y < section.TileTop + section.TileHeight; y++) {
+                for (var x = section.TileLeft; x < section.TileLeft + section.TileWidth; x++) {
                     var tileIndex = layer.GetTileIndex(x, y);
                     var tile = Map.GetSurfaceForTileId(tileIndex);
                     var position = section.GetTilePosition(x, y);
-                    // TODO: Actual drawing.
+                    surface.Blit(tile, position);
                 }
             }
         }

@@ -1,0 +1,9 @@
+LIB_PATHS = [ "/Users/jonas/sdldotnet/bin", "lib" ]
+LIBS = [ "SdlDotNet.dll", "System.Drawing", "Jayrock.dll", "Jayrock.Json.dll" ]
+SRC = FileList["src/*.cs"]
+
+task :build do
+  libs_string = '-r:' + LIBS.join(' -r:')
+  paths_string = '-lib:' + LIB_PATHS.join(' -lib:')
+  sh "gmcs -debug+ #{libs_string} #{paths_string} -out:opiso.exe #{SRC}"
+end

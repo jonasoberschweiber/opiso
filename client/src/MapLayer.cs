@@ -12,10 +12,20 @@ namespace Opiso.Client {
 
         public MapLayer(int width, int height) {
             tileIndices = new short[width * height];
+            Width = width;
+            Height = height;
         }
 
         public short GetTileIndex(int x, int y) {
             return tileIndices[x + y * Height];
+        }
+
+        public void SetTileIndex(int x, int y, short tileId) {
+            tileIndices[x + y * Height] = tileId;
+        }
+        
+        public void SetTileIndex(int idx, short tileId) {
+            tileIndices[idx] = tileId;
         }
 
         public int Index { get; set; }

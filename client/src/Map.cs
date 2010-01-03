@@ -1,7 +1,12 @@
 using System;
-using System.Collections.Generics;
+using System.Collections.Generic;
+using System.Drawing;
+using System.IO;
 
 using SdlDotNet.Graphics;
+
+using Jayrock.Json;
+using Jayrock.Json.Conversion;
 
 namespace Opiso.Client {
 
@@ -32,19 +37,63 @@ namespace Opiso.Client {
     // - stairs with action layer transition
 
     public class Map {
-        private Surface[] tiles = null;
+        private SurfaceCollection[] tilesets = null;
+        private List<string> tilesetNames = null;
         private int actionLayerCount = -1;
+        private int totalTiles = -1;
 
         public Map() {
             Layers = new List<MapLayer>();
-        }        
+        }
+
+        public void LoadFrom(string jsonFile) {
+            var map = (JsonObject)JsonConvert.Import(new StreamReader(jsonFile));
+            int width = ((JsonNumber)map["width"]).ToInt32();
+            int height = ((JsonNumber)map["height"]).ToInt32();
+            tilesetNames = new List<string>();
+            foreach (string tileset in (JsonArray)map["tilesets"]) {
+                tilesetNames.Add(tileset);
+            }
+            foreach (JsonObject layer in (JsonArray)map["layers"]) {
+                var ml = new MapLayer(width, height);
+                ml.Index = ((JsonNumber)layer["no"]).ToInt32();
+                string stype = (string)layer["type"];
+                switch (stype) {
+                case "normal": 
+                    ml.Type = LayerType.Normal; 
+                    break;
+                case "object":
+                    ml.Type = LayerType.Object;
+                    break;
+                case "collision":
+                    ml.Type = LayerType.Collision;
+                    break;
+                }
+                var tiles = (JsonArray)layer["tiles"];
+                for (int i = 0; i < tiles.Count; i++) {
+                    ml.SetTileIndex(i, ((JsonNumber)tiles[i]).ToInt16());
+                }
+                Layers.Add(ml);
+            }
+            Layers.Sort((x, y) => x.Index > y.Index ? 1 : (x.Index < y.Index ? -1 : 0));
+        }
 
         /// <summary>
         /// Loads all tilesets used by this map into memory and assigns
         /// the correct tile ids to the tiles in them.
         /// </summary>
         public void LoadTilesets() {
-            throw new NotImplementedException("Yeah.");
+            // TODO: It'd probably be a good idea to cache the 
+            // tilesets globally.
+            tilesets = new SurfaceCollection[tilesetNames.Count];
+            totalTiles = 0;
+            for (int i = 0; i < tilesets.Length; i++) {
+                var coll = new SurfaceCollection();
+                coll.Add(Path.Combine("tiles", tilesetNames[i]),
+                         new Size(32, 32));
+                tilesets[i] = coll;                
+                totalTiles += coll.Count;
+            }
         }
 
         /// <summary>
@@ -61,13 +110,20 @@ namespace Opiso.Client {
         /// <param name="tileId">The id of the tile to return.</param>
         /// <returns>The surface.</returns>
         public Surface GetSurfaceForTileId(short tileId) {
-            if (null == tiles) {
+            if (null == tilesets) {
                 throw new InvalidOperationException("Tilesets not loaded.");
             }
-            if (tileId < 0 || tileId > short.MAX) {
-                throw new ArgumentException("Invalid tile id.");
+            if (tileId < 0 || tileId >= totalTiles) {
+                throw new IndexOutOfRangeException("Invalid tile id.");
             }
-            return tiles[tileId];
+            int tiles = 0;
+            foreach (var tileset in tilesets) {
+                if (tileId <= tiles + tileset.Count) {
+                    return tileset[tileId - tiles];
+                }
+                tiles += tileset.Count;
+            }
+            return null;
         }
 
         /// <summary>
