@@ -1,2 +1,6 @@
 opiso.exe
 *.mdb
+*.suo
+bin
+obj
+*.csproj.user
